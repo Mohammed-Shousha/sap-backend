@@ -3,8 +3,10 @@ import { ApolloServer } from '@apollo/server'
 import { expressMiddleware } from '@apollo/server/express4'
 import cors from 'cors'
 import bodyParser from 'body-parser'
-import { MongoClient, ObjectId } from 'mongodb'
+import { MongoClient } from 'mongodb'
 import dotenv from 'dotenv'
+import { registerUser, login, registerDoctor } from './mutations/users.mjs'
+import { addPrescription } from './mutations/prescriptions.mjs'
 
 dotenv.config()
 
@@ -16,13 +18,14 @@ const client = await MongoClient.connect(MONGO_URI, { useUnifiedTopology: true }
 const db = client.db('SAP')
 const medicines = db.collection('medicines')
 const users = db.collection('users')
+const prescriptions = db.collection('prescriptions')
 
 const typeDefs = `#graphql
 
    type Medicine {
       _id: ID!
       name: String!
-      otc: Boolean!
+      otc: Boolean! #over-the-counter 
       price: Float!
       description: String!
       position: Coord!
@@ -48,6 +51,12 @@ const typeDefs = `#graphql
       quantity: Int!
       doctorInstructions: String!
    }
+
+   input PrescriptionMedicineInput {
+      medicineId: ID!
+      quantity: Int!
+      doctorInstructions: String!
+   }
       
    type Prescription {
       _id: ID!
@@ -55,18 +64,23 @@ const typeDefs = `#graphql
       doctorId: ID!
       medicines: [PrescriptionMedicine!]
       date: String!
+      purchased: Boolean!
    }
 
    type Query {
       medicines: [Medicine!]
       users: [User!]
-
+      prescriptions: [Prescription!]
    }
 
    type Mutation {
-      resisterUser(name: String!, email: String!, password: String!, doctor: Boolean!): User!
+      resisterUser(name: String!, email: String!, password: String!): User!
+      registerDoctor(name: String!, email: String!, password: String!, licenseNumber: String!): User!
       login(email: String!, password: String!): User!
+      addPrescription(patientId: ID!, doctorId: ID!, medicines: [PrescriptionMedicineInput!]!): Prescription!
+
       deleteUsers: Boolean!
+      deletePrescriptions: Boolean!
    }
    
    `
@@ -80,23 +94,26 @@ const resolvers = {
       users: async () => {
          const data = await users.find().toArray()
          return data
+      },
+      prescriptions: async () => {
+         const data = await prescriptions.find().toArray()
+         return data
       }
    },
    Mutation: {
-      resisterUser: async (_, { name, email, password, doctor }) => {
-         const data = await users.insertOne({ name, email, password, doctor, prescriptions: [] })
-         const user = await users.findOne({ _id: data.insertedId })
-         return user
-      },
-      login: async (_, { email, password }) => {
-         const data = await users.findOne({ email, password })
-         return data
-      },
+      resisterUser: (_, args) => registerUser(args, users),
+      login: (_, args) => login(args, users),
+      registerDoctor: (_, args) => registerDoctor(args, users),
+      addPrescription: (_, args) => addPrescription(args, prescriptions),
       deleteUsers: async () => {
          await users.deleteMany({})
          return true
+      },
+      deletePrescriptions: async () => {
+         await prescriptions.deleteMany({})
+         return true
       }
-   }
+   },
 }
 
 const port = PORT || 4040
@@ -123,5 +140,5 @@ app.use(
 
 
 app.listen({ port }, () =>
-   console.log(`Now browse to http://localhost:${port}`)
+   console.log(`Now browse to http://localhost:${port}/graphql`)
 )
