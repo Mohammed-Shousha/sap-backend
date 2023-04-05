@@ -15,8 +15,7 @@ export const registerUser = async (args, users) => {
       name,
       email,
       password: await encryptPassword(password),
-      doctor: false,
-      prescriptions: [],
+      isDoctor: false,
    })
 
    const user = await users.findOne({
@@ -61,15 +60,14 @@ export const registerDoctor = async (args, users) => {
    const isLicenseNumberValid = checkLicenseNumber(licenseNumber, users)
 
    if (!isLicenseNumberValid) {
-      throw new Error('License number is not valid')
+      throw new Error('Invalid license number')
    }
    
    const data = await users.insertOne({
       name,
       email,
       password: await encryptPassword(password),
-      doctor: true,
-      prescriptions: [],
+      isDoctor: true,
    })
 
    const user = await users.findOne({
@@ -77,6 +75,11 @@ export const registerDoctor = async (args, users) => {
    })
 
    return user
+}
+
+export const deleteUsers = async (users) => {
+   await users.deleteMany({})
+   return true
 }
 
 const encryptPassword = async (password) => {
@@ -90,10 +93,8 @@ const checkPassword = async (password, hash) => {
    return match
 }
 
-const checkLicenseNumber = (licenseNumber, users) => {
+const checkLicenseNumber = (licenseNumber) => {
    const sampleLincenseNumber = [
-      '123456789',
-      '987654321',
       '123456789',
       '987654321',
    ]
