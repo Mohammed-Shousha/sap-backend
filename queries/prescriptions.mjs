@@ -1,39 +1,44 @@
-import { ObjectId } from 'mongodb'
-import { joinPipeline } from '../utils/join.mjs'
+import { ObjectId } from "mongodb";
+import { joinPipeline } from "../utils/join.mjs";
 
 export const allPrescriptions = async (prescriptions) => {
-   const data = await prescriptions.find().toArray()
-   return data
-}
+  const data = await prescriptions.find().toArray();
+  return data;
+};
 
 export const prescriptionById = async (args, prescriptions) => {
-   const { id } = args
+  const { id } = args;
 
-   const data = await prescriptions.aggregate([
+  const data = await prescriptions
+    .aggregate([
       {
-         $match: {
-            _id: new ObjectId(id)
-         }
+        $match: {
+          _id: new ObjectId(id),
+        },
       },
-      ...joinPipeline
-   ]).toArray()
+      ...joinPipeline,
+    ])
+    .toArray();
 
-   return data[0]
-}
+  return data[0];
+};
 
 export const prescriptionsByUser = async (args, prescriptions) => {
-   const { userId } = args
+  const { userId } = args;
 
-   const data = await prescriptions.aggregate([
+  const data = await prescriptions
+    .aggregate([
       {
-         $match: {
-            $or: [
-               { patientId: new ObjectId(userId) },
-               { doctorId: new ObjectId(userId) }
-            ]
-         }
+        $match: {
+          $or: [
+            { patientId: new ObjectId(userId) },
+            { doctorId: new ObjectId(userId) },
+          ],
+        },
       },
-      ...joinPipeline
-   ]).toArray()
-   return data
-}
+      ...joinPipeline,
+    ])
+    .toArray();
+
+  return data;
+};
