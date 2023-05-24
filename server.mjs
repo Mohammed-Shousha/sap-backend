@@ -67,7 +67,21 @@ const typeDefs = `#graphql
       availableQuantity: Int!
    }
 
+   input MedicineInput {
+      name: String!
+      otc: Boolean! #over-the-counter 
+      price: Float!
+      description: String!
+      position: CoordInput!
+      availableQuantity: Int!
+   }
+
    type Coord {
+      row: Int!
+      col: Int!
+   }
+
+   input CoordInput {
       row: Int!
       col: Int!
    }
@@ -84,16 +98,16 @@ const typeDefs = `#graphql
       medicineId: ID!
       medicineName: String!
       quantity: Int!
-      doctorInstructions: String!
       price: Float!
+      doctorInstructions: String
    }
 
    input PrescriptionMedicineInput {
       medicineId: ID!
       medicineName: String!
       quantity: Int!
-      doctorInstructions: String!
       price: Float!
+      doctorInstructions: String
    }
       
    type Prescription {
@@ -105,7 +119,7 @@ const typeDefs = `#graphql
       medicines: [PrescriptionMedicine!]
       date: Date!
       isPaid: Boolean!
-      isRecived: Boolean!
+      isReceived: Boolean!
    }
 
    type Query {
@@ -124,11 +138,11 @@ const typeDefs = `#graphql
       registerUser(name: String!, email: String!, password: String!): User!
       registerDoctor(name: String!, email: String!, password: String!, licenseNumber: String!): User!
       login(email: String!, password: String!): User!
-      addPrescription(patientId: ID!, doctorId: ID!, medicines: [PrescriptionMedicineInput!]!): Prescription!
+      addPrescription(patientId: ID!, doctorId: ID!, medicines: [PrescriptionMedicineInput!]!): Boolean!
       deleteUsers: Boolean!
       deletePrescriptions: Boolean!
-      addMedicines: Boolean!
-      updateMedicine(id: ID!, orderedQuantity: Int!): Medicine!
+      addMedicines(medicinesArray: [MedicineInput!]): Boolean!
+      updateMedicine(id: ID!, addedQuantity: Int!): Boolean!
       deleteMedicines: Boolean!
    }
    
@@ -151,9 +165,9 @@ const resolvers = {
     registerUser: (_, args) => registerUser(args, users),
     registerDoctor: (_, args) => registerDoctor(args, users),
     deleteUsers: () => deleteUsers(users),
-    addPrescription: (_, args) => addPrescription(args, prescriptions),
+    addPrescription: (_, args) => addPrescription(args, prescriptions, users),
     deletePrescriptions: () => deletePrescriptions(prescriptions),
-    addMedicines: () => addMedicines(medicines),
+    addMedicines: (_, args) => addMedicines(args, medicines),
     updateMedicine: (_, args) => updateMedicine(args, medicines),
     deleteMedicines: () => deleteMedicines(medicines),
   },
