@@ -1,145 +1,49 @@
 import { ObjectId } from "mongodb";
+import { checkObjectId } from "../utils/checkUtils.mjs";
 
-const dummyMedicines = [
-  {
-    name: "Tylenol",
-    description: "Pain reliever and fever reducer",
-    price: 15.5,
-    otc: true,
-    position: {
-      row: 1,
-      col: 1,
-    },
-    availableQuantity: 100,
-  },
-  {
-    name: "Advil",
-    description: "Pain reliever and fever reducer",
-    price: 18.0,
-    otc: true,
-    position: {
-      row: 2,
-      col: 1,
-    },
-    availableQuantity: 75,
-  },
-  {
-    name: "Zyrtec",
-    description: "Antihistamine",
-    price: 27.5,
-    otc: false,
-    position: {
-      row: 3,
-      col: 2,
-    },
-    availableQuantity: 50,
-  },
-  {
-    name: "Lipitor",
-    description: "Cholesterol-lowering medication",
-    price: 85.0,
-    otc: false,
-    position: {
-      row: 2,
-      col: 3,
-    },
-    availableQuantity: 25,
-  },
-  {
-    name: "Metformin",
-    description: "Diabetes medication",
-    price: 12.5,
-    otc: false,
-    position: {
-      row: 4,
-      col: 1,
-    },
-    availableQuantity: 125,
-  },
-  {
-    name: "Benadryl",
-    description: "Allergy relief medication",
-    price: 20.0,
-    otc: true,
-    position: {
-      row: 1,
-      col: 2,
-    },
-    availableQuantity: 60,
-  },
-  {
-    name: "Mucinex",
-    description: "Expectorant",
-    price: 30.0,
-    otc: true,
-    position: {
-      row: 3,
-      col: 3,
-    },
-    availableQuantity: 40,
-  },
-  {
-    name: "Zantac",
-    description: "Acid reducer",
-    price: 22.5,
-    otc: false,
-    position: {
-      row: 4,
-      col: 2,
-    },
-    availableQuantity: 30,
-  },
-  {
-    name: "Ventolin",
-    description: "Asthma inhaler",
-    price: 40.0,
-    otc: false,
-    position: {
-      row: 5,
-      col: 1,
-    },
-    availableQuantity: 20,
-  },
-  {
-    name: "Prozac",
-    description: "Antidepressant",
-    price: 60.0,
-    otc: false,
-    position: {
-      row: 5,
-      col: 2,
-    },
-    availableQuantity: 15,
-  },
-];
+export const addMedicines = async (args, medicines) => {
+  const { medicinesArray } = args;
 
-export const addMedicines = async (medicines) => {
-  await medicines.insertMany(medicines);
+  const result = await medicines.insertMany(medicinesArray);
+
+  if (!result.acknowledged) {
+    throw new Error("Could not add medicines");
+  }
+
   return true;
 };
 
 export const updateMedicine = async (args, medicines) => {
-  const { id, orderedQuantity } = args;
+  const { id, addedQuantity } = args;
 
-  const data = await medicines.findOne({
-    _id: new ObjectId(id),
-    availableQuantity: { $gte: orderedQuantity }, // Check if there is enough quantity
-  });
-
-  if (!data) {
-    throw new Error("Not enough quantity");
+  if (!checkObjectId(id)) {
+    throw new Error("Invalid medicine id");
   }
 
-  const result = await medicines.findOneAndUpdate(
+  const medicine = await medicines.findOne({ _id: new ObjectId(id) });
+
+  if (!medicine) {
+    throw new Error("Medicine not found");
+  }
+
+  const result = await medicines.updateOne(
     { _id: new ObjectId(id) },
-    { $inc: { availableQuantity: -orderedQuantity } }, // Decrement the quantity
-    { returnDocument: "after" }
+    { $inc: { availableQuantity: addedQuantity } }
   );
 
-  return result.value;
+  if (result.modifiedCount !== 1) {
+    throw new Error("Medicine not updated");
+  }
+
+  return true;
 };
 
 export const deleteMedicines = async (medicines) => {
-  await medicines.deleteMany({});
+  const result = await medicines.deleteMany();
+
+  if (!result.acknowledged) {
+    throw new Error("Could not delete medicines");
+  }
+
   return true;
 };

@@ -1,29 +1,8 @@
-import bcrypt from "bcrypt";
-
-export const registerUser = async (args, users) => {
-  const { name, email, password } = args;
-
-  const isUser = await users.findOne({
-    email,
-  });
-
-  if (isUser) {
-    throw new Error("User already exists");
-  }
-
-  const data = await users.insertOne({
-    name,
-    email,
-    password: await encryptPassword(password),
-    isDoctor: false,
-  });
-
-  const user = await users.findOne({
-    _id: data.insertedId,
-  });
-
-  return user;
-};
+import {
+  encryptPassword,
+  checkPassword,
+  checkLicenseNumber,
+} from "../utils/checkUtils.mjs";
 
 export const login = async (args, users) => {
   const { email, password } = args;
@@ -45,6 +24,31 @@ export const login = async (args, users) => {
   return user;
 };
 
+export const registerUser = async (args, users) => {
+  const { name, email, password } = args;
+
+  const isUser = await users.findOne({ email });
+
+  if (isUser) {
+    throw new Error("User already exists");
+  }
+
+  const data = await users.insertOne({
+    name,
+    email,
+    password: await encryptPassword(password),
+    isDoctor: false,
+  });
+
+  const user = await users.findOne({ _id: data.insertedId });
+
+  if (!user) {
+    throw new Error("Could not create user");
+  }
+
+  return user;
+};
+
 export const registerDoctor = async (args, users) => {
   const { name, email, password, licenseNumber } = args;
 
@@ -56,9 +60,7 @@ export const registerDoctor = async (args, users) => {
     throw new Error("User already exists");
   }
 
-  const isLicenseNumberValid = checkLicenseNumber(licenseNumber, users);
-
-  if (!isLicenseNumberValid) {
+  if (!checkLicenseNumber(licenseNumber, users)) {
     throw new Error("Invalid license number");
   }
 
@@ -69,33 +71,17 @@ export const registerDoctor = async (args, users) => {
     isDoctor: true,
   });
 
-  const user = await users.findOne({
-    _id: data.insertedId,
-  });
+  const user = await users.findOne({ _id: data.insertedId });
 
   return user;
 };
 
 export const deleteUsers = async (users) => {
-  await users.deleteMany({});
-  return true;
-};
+  const result = await users.deleteMany();
 
-const encryptPassword = async (password) => {
-  const salt = await bcrypt.genSalt(10);
-  const hash = await bcrypt.hash(password, salt);
-  return hash;
-};
-
-const checkPassword = async (password, hash) => {
-  const match = await bcrypt.compare(password, hash);
-  return match;
-};
-
-const checkLicenseNumber = (licenseNumber) => {
-  const sampleLincenseNumber = ["123456789", "987654321"];
-
-  if (sampleLincenseNumber.includes(licenseNumber)) {
-    return true;
+  if (!result.acknowledged) {
+    throw new Error("Could not delete users");
   }
+
+  return true;
 };

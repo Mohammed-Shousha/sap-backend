@@ -1,36 +1,43 @@
 import { ObjectId } from "mongodb";
-import { joinPipeline } from "../utils/join.mjs";
+import { checkObjectId } from "../utils/checkUtils.mjs";
 
-export const addPrescription = async (args, prescriptions) => {
+export const addPrescription = async (args, prescriptions, users) => {
   const { patientId, doctorId, medicines } = args;
 
-  const data = await prescriptions.insertOne({
+  if (!checkObjectId(patientId) || !checkObjectId(doctorId)) {
+    throw new Error("Invalid user id");
+  }
+
+  const ids = [new ObjectId(patientId), new ObjectId(doctorId)];
+
+  const matchedUsers = await users.find({ _id: { $in: ids } }).toArray();
+
+  if (matchedUsers.length !== 2) {
+    throw new Error("User not found");
+  }
+
+  const insertedPrescription = await prescriptions.insertOne({
     patientId: new ObjectId(patientId),
     doctorId: new ObjectId(doctorId),
     medicines,
     date: new Date(),
     isPaid: false,
-    isRecived: false,
+    isReceived: false,
   });
 
-  const prescription = await prescriptions
-    .aggregate([
-      {
-        $match: {
-          _id: data.insertedId,
-        },
-      },
-      ...joinPipeline,
-    ])
-    .toArray();
+  if (!insertedPrescription.acknowledged) {
+    throw new Error("Could not add prescription");
+  }
 
-  return prescription[0];
+  return true;
 };
 
-//TODO: calclate prescription total price
-// using medicines price and quantity
-
 export const deletePrescriptions = async (prescriptions) => {
-  await prescriptions.deleteMany({});
+  const result = await prescriptions.deleteMany();
+
+  if (!result.acknowledged) {
+    throw new Error("Could not delete prescriptions");
+  }
+
   return true;
 };
