@@ -1,15 +1,23 @@
 import { ObjectId } from "mongodb";
 import { joinPipeline } from "../utils/join.mjs";
+import { checkObjectId } from "../utils/checkUtils.mjs";
 
 export const allPrescriptions = async (prescriptions) => {
-  const data = await prescriptions.find().toArray();
-  return data;
+  const prescriptionsResult = await prescriptions
+    .aggregate([...joinPipeline])
+    .toArray();
+
+  return prescriptionsResult;
 };
 
 export const prescriptionById = async (args, prescriptions) => {
   const { id } = args;
 
-  const data = await prescriptions
+  if (!checkObjectId(id)) {
+    throw new Error("Invalid prescription id");
+  }
+
+  const prescription = await prescriptions
     .aggregate([
       {
         $match: {
@@ -20,13 +28,17 @@ export const prescriptionById = async (args, prescriptions) => {
     ])
     .toArray();
 
-  return data[0];
+  return prescription[0];
 };
 
 export const prescriptionsByUser = async (args, prescriptions) => {
   const { userId } = args;
 
-  const data = await prescriptions
+  if (!checkObjectId(userId)) {
+    throw new Error("Invalid user id");
+  }
+
+  const userPrescriptions = await prescriptions
     .aggregate([
       {
         $match: {
@@ -40,5 +52,5 @@ export const prescriptionsByUser = async (args, prescriptions) => {
     ])
     .toArray();
 
-  return data;
+  return userPrescriptions;
 };

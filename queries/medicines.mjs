@@ -1,22 +1,28 @@
 import { ObjectId } from "mongodb";
+import { checkObjectId } from "../utils/checkUtils.mjs";
 
 export const allMedicines = async (medicines) => {
-  const data = await medicines.find().toArray();
-  return data;
+  const medicinesResult = await medicines.find().toArray();
+  return medicinesResult;
 };
 
 export const otcMedicines = async (medicines) => {
-  const data = await medicines.find({ otc: true }).toArray();
-  return data;
+  const otcMeds = await medicines.find({ otc: true }).toArray();
+  return otcMeds;
 };
 
 export const medicineById = async (args, medicines) => {
   const { id } = args;
 
-  const data = await medicines.findOne({
-    _id: new ObjectId(id),
-    availableQuantity: { $gte: 1 },
-  });
+  if (!checkObjectId(id)) {
+    throw new Error("Invalid medicine id");
+  }
 
-  return data;
+  const medicine = await medicines.findOne({ _id: new ObjectId(id) });
+
+  if (!medicine) {
+    throw new Error("Medicine not found");
+  }
+
+  return medicine;
 };
