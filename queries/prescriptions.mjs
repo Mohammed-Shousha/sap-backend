@@ -49,6 +49,11 @@ export const prescriptionsByUser = async (args, prescriptions) => {
         },
       },
       ...joinPipeline,
+      {
+        $sort: {
+          date: -1,
+        },
+      },
     ])
     .toArray();
 
